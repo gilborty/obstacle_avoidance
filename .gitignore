@@ -40,3 +40,7 @@ Thumbs.db
 
 # Build artifacts
 build/
+
+# Extra stuff
+.vscode/
+tags
