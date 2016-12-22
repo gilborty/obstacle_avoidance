@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
 
 # Global VARIABLES
 set(CMAKE_PROJECT_NAME "obstacle_avoidance")
-set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "--std=gnu++11")
 
 # Set some CMake Project values correctly
 PROJECT(${CMAKE_PROJECT_NAME})

@@ -16,6 +16,7 @@
 namespace 
 {
     //Members
+    bool add_remove_point = false;
     bool need_to_init = true;
     bool program_is_running = true;
     
@@ -24,10 +25,18 @@ namespace
     cv::Mat gray;
     cv::Mat frame;
     cv::Mat resized_frame;
+    cv::Mat previous_resized_frame;
 
     //Algorithm options and members
-    std::vector<cv::Point> features_prev;
-    std::vector<cv::Point> features_next;
+    std::vector<cv::Point2f> features[2];
+
+    cv::TermCriteria term_criteria(cv::TermCriteria::COUNT|cv::TermCriteria::EPS,20,0.03);
+    cv::Size subPixWinSize(10,10);
+    cv::Size winSize(31,31);
+
+    auto max_count = 500; // Maximum amount of features to track
+    auto quality_level = 0.01;
+    auto min_dist = 10; //Minimum distance between two features
 
     //Methods
 
@@ -44,6 +53,12 @@ namespace
             case 'q': 
             {
                 program_is_running = false;
+                break;
+            }
+            case 'r':
+            {
+                need_to_init = true;
+                std::cout << "ReInitalizing features to track" << std::endl;
                 break;
             }
         }
@@ -144,18 +159,49 @@ int main(int argc, char** argv)
             // Downsample
             // Use a bicubic interpolation and downsample by half (0.5)
             cv::resize(gray, resized_frame, cv::Size(), 0.5, 0.5, cv::INTER_CUBIC);
+            cv::resize(frame, frame, cv::Size(), 0.5, 0.5, cv::INTER_CUBIC);
 
             // Check if we need to initialize points
             if(need_to_init)
             {   
-                cv::
+                cv::goodFeaturesToTrack(resized_frame, features[1], max_count, quality_level, min_dist);
+                cv::cornerSubPix(resized_frame, features[1], subPixWinSize, cv::Size(-1,-1), term_criteria);
             }
+            else if(!features[0].empty())
+            {
+                if(previous_resized_frame.empty()) 
+                {
+                    resized_frame.copyTo(previous_resized_frame);
+                }
+                
+                std::vector<uchar> status;
+                std::vector<float> error;
+
+                cv::calcOpticalFlowPyrLK(previous_resized_frame, resized_frame, features[0], features[1], status, error, winSize, 3, term_criteria, 0, 0.001);
+
+                size_t i, k;
+                for( i = k = 0; i < features[1].size(); ++i)
+                {
+                    if(!status[i])
+                    {
+                        continue;
+                    }
+                    features[1][k++] = features[1][i];
+                    cv::circle(frame, features[1][i], 3, cv::Scalar(0,255,0), -1, 8);
+                }
+                features[1].resize(k);
+            }
+
+            need_to_init = false;
 
             // Display
             cv::imshow("Input Feed", frame);
             cv::imshow("Resized Frame", resized_frame);
 
             handle_wait_key(static_cast<char>(cv::waitKey(33)));
+
+            std::swap(features[1],features[0]);
+            cv::swap(previous_resized_frame, resized_frame);
         }
     }
    
